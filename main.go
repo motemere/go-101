@@ -1,17 +1,18 @@
 package main
 
 import (
-	"io"
-	"net/http"
-	"os"
-
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	log "github.com/sirupsen/logrus"
+	"io"
+	"os"
 )
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	file, err := os.OpenFile("logrus.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	// separate logfile for app
+	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 
 	if err == nil {
 		log.SetOutput(io.MultiWriter(os.Stdout, file))
@@ -23,27 +24,32 @@ func init() {
 
 func main() {
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// separate logfile for fiber
+	file, err := os.OpenFile("fiber.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
 
-		logRequest(r)
+	webApp := fiber.New()
+	webApp.Use(logger.New(logger.Config{
+		Format:     "[${time}] [${ip}]:${port} ${status} - ${latency} ${method} ${path}\n",
+		TimeFormat: "02-Jan-2006 15:04:05",
+		TimeZone:   "Local",
+		Output:     file,
+	}))
 
-		writeResponse([]byte("Hello World"), w)
+	webApp.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!")
 	})
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-
-		logRequest(r)
-
-		writeResponse([]byte("OK"), w)
+	webApp.Get("/health", func(c *fiber.Ctx) error {
+		return c.SendString("OK")
 	})
 
-	http.HandleFunc("/pages", func(w http.ResponseWriter, r *http.Request) {
-
-		logRequest(r)
-
-		pageNumber := r.URL.Query().Get("page")
-
-		writeResponse([]byte("Page called: "+pageNumber), w)
+	webApp.Get("/pages", func(c *fiber.Ctx) error {
+		pageNumber := c.Query("page")
+		toSort := c.Query("sort")
+		return c.SendString("Page called: " + pageNumber + "\n" + "Sort: " + toSort)
 	})
 
 	port := "8088"
@@ -52,22 +58,5 @@ func main() {
 		"port": port,
 	}).Info("Server started")
 
-	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-
-func logRequest(r *http.Request) {
-	log.WithFields(log.Fields{
-		"URL":        r.URL.Path,
-		"Params":     r.URL.Query(),
-		"Method":     r.Method,
-		"RemoteAddr": r.RemoteAddr,
-		"UserAgent":  r.Header.Get("User-Agent"),
-	}).Info("Request received")
-}
-
-func writeResponse(response []byte, w http.ResponseWriter) {
-	_, err := w.Write(response)
-	if err != nil {
-		return
-	}
+	log.Fatal(webApp.Listen(":" + port))
 }
