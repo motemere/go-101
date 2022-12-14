@@ -1,0 +1,12 @@
+GET http://localhost:8088/
+
+###
+
+GET http://localhost:8088/health
+
+###
+
+GET http://localhost:8088/pages?page=5&sort=true
+
+###
+
