@@ -2,11 +2,13 @@ module github.com/motemere/go-101
 
 go 1.19
 
-require github.com/sirupsen/logrus v1.9.0
+require (
+	github.com/gofiber/fiber/v2 v2.40.1
+	github.com/sirupsen/logrus v1.9.0
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/gofiber/fiber/v2 v2.40.1 // indirect
 	github.com/klauspost/compress v1.15.13 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
